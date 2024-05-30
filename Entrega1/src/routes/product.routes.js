@@ -1,207 +1,89 @@
-// const fs = require("fs");
+
 import fs from "fs";
 import {Router} from "express";
+import { error } from "console";
 
+const router = Router();
+const products = JSON.parse(fs.readFileSync('./data/products.json', 'utf-8'));
 
-// Clase Product
-class Product {
-  constructor(title, description, price, thumbnail, code, stock) {
-    this.id = 0;
-    this.title = title;
-    this.description = description;
-    this.price = price;
-    this.thumbnail = thumbnail;
-    this.code = code;
-    this.stock = stock;
-  }
-}
+//Ruta de Todos los productos
+router.get("/", (req, res) => {
+  res.json(products);
+})
 
-// Clase Product Manager
-class ProductManager {
-  // path -> Ruta del archivo de persistencia
-  constructor(path) {
-    this.path = path;
+//Ruta de GET/:pid lista los productos segun id
+router.get("/:pid", async(req, res) => {
+  const product = await products.find(product => product.id === req.params.id)
 
-    // Chequeamos que el archivo exista
-    if (fs.existsSync(this.path)) {
-      try {
-        // Si existe leemos el contenido
-        this.products = JSON.parse(fs.readFileSync(this.path, "utf-8"));
-      } catch (error) {
-        // Si hubo un error, creamos un array vacío
-        this.products = [];
-      }
-    } else {
-      // Si no existe, creamos un array vacío
-      this.products = [];
+  if (!products) {
+    res.status(404).json({
+      error: 'This product id was not found'
+    }) } else {
+      res.json(product);
     }
-  }
+})
 
-  async addProduct(product) {
-    // Valida que todos los campos contengan datos
-    if (
-      !product.title ||
-      !product.description ||
-      !product.price ||
-      !product.thumbnail ||
-      !product.code ||
-      !product.stock
-    ) {
-      console.log("Todos los campos son obligatorios");
-      return;
-    }
+//Ruta de POST agrega un nuevo producto a BD
+router.post("/",(req, res) => {
+  const {imagen, marca, tipo, descripcion, precio} = req.body;
+  const newId= products.length > 0 ? products[products.length - 1].id + 1 : 1;
 
-    // Valida que el código no exista en el array
-    // if (this.products.some((p) => p.code === product.code)) {
-    //   console.log("El código ya existe");
-    //   return;
-    // }
-
-    // [1, 2, 3, 4] -> [1, 3, 4] -> [1, 3, 4, 4] ❌
-    // const newId = this.products.length + 1; ❌
-
-    // [1, 2, 3, 4] -> [1, 2, 3] -> [1, 2, 3, 4] ✅
-    // Primero chequemos que el array no esté vacio
-    if (this.products.length > 0) {
-      // Sino esta vacio le asignamos el id del último elemento + 1
-      // Toma el id del último elemento
-      const newId = this.products[this.products.length - 1].id + 1;
-      product.id = newId;
-    } else {
-      // Si esta vacio le asignamos el id 1 para el primer producto
-      product.id = 1;
-    }
-
-    this.products.push(product);
-
-    try {
-      await fs.promises.writeFile(
-        this.path,
-        JSON.stringify(this.products, null, "\t")
-      );
-
-      console.log("Se agrego el producto correctamente");
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  getProducts() {
-    // Devolvemos el array de productos
-    return this.products;
-  }
-
-  getProductById(idProduct) {
-    if (isNaN(Number(idProduct))) {
-      console.log("El id debe ser un número");
-      return;
-    }
-
-    // Buscamos el producto por su id
-    const product = this.products.find(
-      (product) => product.id === Number(idProduct)
-    );
-
-    if (!product) {
-      return "No se encontro el producto";
-    }
-
-    return product;
-  }
-
-  deleteProduct(idProduct) {
-    // Obtenemos el indice del producto
-    const productIndex = this.products.findIndex(
-      (product) => product.id === idProduct
-    );
-
-    if (productIndex === -1) {
-      console.log("No se encontro el producto");
-      return;
-    }
-
-    // Eliminamos el producto
-    //  0  1  2
-    // [1, 2, 3] -> [1] === (indice) 0
-    // productIndex == 0
-    // 1 -> Quiero eliminarlo
-    this.products.splice(productIndex, 1);
-
-    try {
-      fs.promises.writeFile(
-        this.path,
-        JSON.stringify(this.products, null, "\t")
-      );
-
-      console.log("Se elimino el producto correctamente");
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  updateProduct(idProduct, product) {
-    // Obtenemos el indice del producto
-    const productIndex = this.products.findIndex(
-      (product) => product.id === idProduct
-    );
-
-    const productOld = this.products[productIndex];
-
-    if (productIndex === -1) {
-      console.log("No se encontro el producto");
-      return;
-    }
-
-    // Actualizamos el producto
-    // Si algun campo coincide con productOld, lo sobreescribimos
-    this.products[productIndex] = {
-      ...productOld,
-      ...product,
+  if (!imagen || !marca || !tipo || !descripcion || !precio) {
+    res.status(400).json({ error:'every field is required' })
+  } else {
+    const newProduct = {
+      id: newId,
+      status: true,
+      imagen,
+      marca,
+      tipo,
+      descripcion,
+      precio
     };
+    products.push(newProduct);
+    fs.writeFileSync('./data/products.json', JSON.stringify(products, null, '\t'));
+    res.json(products);
+  }
+})
 
-    try {
-      fs.promises.writeFile(
-        this.path,
-        JSON.stringify(this.products, null, "\t")
-      );
+// PUT /:pid -> Actualiza un producto existente con lo que enviamos de body (nunca va a cambiar el id o eliminarlo)
+router.put("/:pid", (req, res) => {
+  const{pid} = req.params
+  const { imagen, marca, tipo, descripcion, precio } = req.body;
 
-      console.log("Se actualizo el producto correctamente");
-    } catch (error) {
-      console.log(error);
+  if (!imagen || !marca || !tipo || !descripcion || !precio) {
+    res.status(400).json({ error:'every field is required' })
+  } else {
+    const product = products.find(product => product.id === pid);
+    if (!product) {
+      res.status(404).json({ error:'Product not found with the id required' })
+    } else {
+      product.imagen = imagen;
+      product.marca = marca;
+      product.tipo = tipo;
+      product.descripcion = descripcion;
+      product.precio = precio;
+      fs.writeFileSync('./data/products.json', JSON.stringify(products, null, '\t'));
+      res.json(products);
     }
   }
+})
+
+//DELETE /:pid -> Elimina un producto existente dado un id.
+
+router.delete("/:pid", (req, res) => {
+  const {pid} = req.params
+  const productIndex = products.findIndex(product => product.id === pid);
+
+  if (pid > products[products.length-1].id) {
+    res.status(400).json({ error:'Product not found with the id ${pid} required' })
+}else{
+  try{
+    const deletedProduct = products.splice(productIndex, 1);
+    res.json(deletedProduct);
+  } catch(error){
+    res.status(400).json(`An error occurred while processing the request: ${error}`);
+  }
 }
-
-// module.exports = new ProductManager("./data/products.json");
-export default new ProductManager("./data/products.json");
-
-// Pruebas
-// const manager = new ProductManager("./data/products.json");
-
-// Add Product ✅
-// manager.addProduct(
-//   new Product("Product 1", "Description 1", 100, "image 1", "0001A", 10)
-// );
-// manager.addProduct(
-//   new Product("Product 2", "Description 2", 200, "image 2", "0002B", 20)
-// );
-// manager.addProduct(
-//   new Product("Product 3", "Description 3", 300, "image 3", "0003C", 30)
-// );
-// manager.addProduct(
-//   new Product("Product 4", "Description 4", 400, "image 4", "0004D", 40)
-// );
-
-// Get Products ✅
-// console.log(manager.getProducts());
-
-// Get Product By Id ✅
-// console.log(manager.getProductById(50));
-
-// Delete Product ✅
-// manager.deleteProduct(3);
-
-// Update Product ✅
-// manager.updateProduct(1, {
-//   title: "Product 1 Updated",
-// });
+})
+export default router
