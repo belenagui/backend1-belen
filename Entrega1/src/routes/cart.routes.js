@@ -2,8 +2,8 @@ import { Router } from "express";
 import fs from "fs"
 
 const router = Router();
-const cartsFilePath = './data/carts.json';
-const productsFilePath = './data/products.json';
+const cartsFilePath = '../data/carts.json';
+const productsFilePath = '../data/products.json';
 
 const carts = JSON.parse(fs.readFileSync(cartsFilePath, 'utf-8'));
 const products = JSON.parse(fs.readFileSync(productsFilePath, 'utf-8'));

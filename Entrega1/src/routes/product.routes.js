@@ -3,7 +3,7 @@ import {Router} from "express";
 import { error } from "console";
 
 const router = Router();
-const products = JSON.parse(fs.readFileSync('./data/products.json', 'utf-8'));
+const products = JSON.parse(fs.readFileSync('../data/products.json', 'utf-8'));
 
 //Ruta de Todos los productos
 router.get("/", (req, res) => {
@@ -40,7 +40,7 @@ router.post("/",(req, res) => {
       precio
     };
     products.push(newProduct);
-    fs.writeFileSync('./data/products.json', JSON.stringify(products, null, '\t'));
+    fs.writeFileSync('../data/products.json', JSON.stringify(products, null, '\t'));
     res.json(products);
   }
 })
@@ -62,7 +62,7 @@ router.put("/:pid", (req, res) => {
       product.tipo = tipo;
       product.descripcion = descripcion;
       product.precio = precio;
-      fs.writeFileSync('./data/products.json', JSON.stringify(products, null, '\t'));
+      fs.writeFileSync('../data/products.json', JSON.stringify(products, null, '\t'));
       res.json(products);
     }
   }
